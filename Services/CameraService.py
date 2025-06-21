@@ -11,7 +11,7 @@ class CameraService:
     Supports both webcam and screen capture capabilities.
     """
 
-    def __init__(self, camera_index: int = 0, resolution: Tuple[int, int] = (640, 480), fps: int = 30):
+    def __init__(self, camera_index: int = 0, resolution: Tuple[int, int] = (640, 480), fps: int = 15):
         """
         Initialize the camera service.
 
