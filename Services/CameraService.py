@@ -11,7 +11,7 @@ class CameraService:
     Supports both webcam and screen capture capabilities.
     """
 
-    def __init__(self, camera_index: int = 0, resolution: Tuple[int, int] = (640, 480)):
+    def __init__(self, camera_index: int = 0, resolution: Tuple[int, int] = (640, 480), fps: int = 30):
         """
         Initialize the camera service.
 
@@ -19,11 +19,13 @@ class CameraService:
             camera_index (int): Index of the camera device (0 for default webcam)
             resolution (tuple): Camera resolution (width, height)
         """
+        print(f"Initializing CameraService with camera_index: {camera_index}, resolution: {resolution}, fps: {fps}")
         self.camera_index = camera_index
         self.resolution = resolution
         self.camera = None
         self.is_capturing = False
         self._capture_thread = None
+        self.fps = fps
 
     def initialize_camera(self) -> bool:
         """
@@ -32,13 +34,14 @@ class CameraService:
         Returns:
             bool: True if camera opened successfully, False otherwise
         """
+        print(f"Initializing camera with camera_index: {self.camera_index}")
         try:
             self.camera = cv2.VideoCapture(self.camera_index)
 
             # Set camera properties
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
-            self.camera.set(cv2.CAP_PROP_FPS, 30)
+            self.camera.set(cv2.CAP_PROP_FPS, self.fps)
 
             if not self.camera.isOpened():
                 print(f"Error: Could not open camera at index {self.camera_index}")
@@ -53,11 +56,12 @@ class CameraService:
 
     def get_available_cameras(self) -> list:
         """
-        Get list of available camera devices.
+        Get list of available camera devices to use in the camera_index parameter in the constructor
 
         Returns:
             list: List of available camera indices
         """
+        print("Getting available cameras")
         available_cameras = []
         for i in range(10):  # Check first 10 camera indices
             cap = cv2.VideoCapture(i)
@@ -73,16 +77,18 @@ class CameraService:
         Returns:
             np.ndarray: Captured frame as numpy array, or None if failed
         """
+        print("Capturing frame")
         if self.camera is None or not self.camera.isOpened():
             if not self.initialize_camera():
                 return None
 
-        ret, frame = self.camera.read()
-        if ret:
+        # self.camera.read() returns a boolean and the frame if it was captured
+        frame_captured, frame = self.camera.read()
+        if frame_captured:
             return frame
-        else:
-            print("Error: Could not capture frame")
-            return None
+
+        print("Error: Could not capture frame")
+        return None
 
     def start_capture(self) -> bool:
         """
@@ -91,8 +97,9 @@ class CameraService:
         Returns:
             bool: True if capture started successfully
         """
+        print("Starting capture")
         if self.is_capturing:
-            print("Camera is already capturing")
+            print("Error: Camera is already capturing")
             return False
 
         if not self.initialize_camera():
@@ -106,12 +113,14 @@ class CameraService:
 
     def stop_capture(self):
         """Stop continuous camera capture."""
+        print("Stopping capture")
         self.is_capturing = False
         if self._capture_thread:
             self._capture_thread.join(timeout=1.0)
 
     def _capture_loop(self):
         """Internal method for continuous capture loop."""
+        print("Starting capture loop")
         while self.is_capturing:
             frame = self.capture_frame()
             if frame is not None:
@@ -136,6 +145,7 @@ class CameraService:
         Yields:
             np.ndarray: Captured frames
         """
+        print("Getting frame generator")
         if not self.initialize_camera():
             return
 
@@ -157,6 +167,7 @@ class CameraService:
         Returns:
             bool: True if saved successfully
         """
+        print("Saving frame")
         try:
             cv2.imwrite(filename, frame)
             return True
@@ -175,6 +186,7 @@ class CameraService:
         Returns:
             bool: True if recording completed successfully
         """
+        print("Recording video")
         if not self.initialize_camera():
             return False
 
@@ -208,6 +220,7 @@ class CameraService:
 
     def release(self):
         """Release camera resources."""
+        print("Releasing camera")
         self.stop_capture()
         if self.camera is not None:
             self.camera.release()
@@ -215,9 +228,11 @@ class CameraService:
 
     def __enter__(self):
         """Context manager entry."""
+        print("Entering context manager")
         self.initialize_camera()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
+        print("Exiting context manager")
         self.release()
