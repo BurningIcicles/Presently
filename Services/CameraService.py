@@ -1,1 +1,1 @@
-# file used to return output from a given source
+# CameraService is used to return output from a given source, by default laptop screen
