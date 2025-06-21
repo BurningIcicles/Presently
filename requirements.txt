@@ -1,1 +1,4 @@
-# Core dependencies
+# Core dependencies for camera and AI
+# run "pip install -r requirements.txt" in terminal to update packages
+opencv-python==4.8.1.78
+numpy==1.24.3
