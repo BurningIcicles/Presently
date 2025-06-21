@@ -84,6 +84,7 @@ class CameraService:
 
         # self.camera.read() returns a boolean and the frame if it was captured
         frame_captured, frame = self.camera.read()
+        print("frame_captured: ", frame_captured)
         if frame_captured:
             return frame
 
