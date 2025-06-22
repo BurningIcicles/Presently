@@ -96,39 +96,39 @@ class CameraService:
     def _log_camera_error(self):
         """Log detailed camera error information."""
         print("=== Camera Error Details ===")
-
+        
         # Check if camera object exists
         if self.camera is None:
             print("Error: Camera object is None")
             return
-
+        
         # Check if camera is opened
         if not self.camera.isOpened():
             print("Error: Camera is not opened")
             return
-
+        
         # Get camera properties for debugging
         try:
             width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
             height = self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
             fps = self.camera.get(cv2.CAP_PROP_FPS)
             brightness = self.camera.get(cv2.CAP_PROP_BRIGHTNESS)
-
+            
             print(f"Camera Properties:")
             print(f"  Width: {width}")
             print(f"  Height: {height}")
             print(f"  FPS: {fps}")
             print(f"  Brightness: {brightness}")
-
+            
             # Check if properties are valid
             if width <= 0 or height <= 0:
                 print("Error: Invalid camera resolution")
             if fps <= 0:
                 print("Error: Invalid FPS setting")
-
+                
         except Exception as e:
             print(f"Error getting camera properties: {e}")
-
+        
         # Common troubleshooting steps
         print("\nTroubleshooting suggestions:")
         print("1. Check if camera is connected")
@@ -136,19 +136,19 @@ class CameraService:
         print("3. Check camera permissions")
         print("4. Try a different camera index")
         print("5. Restart the camera service")
-
+        
         # Try to get more specific error info
         try:
             # Try to read again to see if it's a temporary issue
             retry_captured, retry_frame = self.camera.read()
             print(f"Retry attempt - frame_captured: {retry_captured}")
-
+            
             if not retry_captured:
                 print("Error: Frame capture consistently failing")
-
+                
         except Exception as e:
             print(f"Exception during retry: {e}")
-
+        
         print("==========================")
 
     def start_capture(self) -> bool:
