@@ -1,7 +1,17 @@
-# socket_server.py
+# SocketReceiver.py (inside Presently/Sockets)
+
+import os
+import sys
 import socket
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+# Step 2: Now you can import LCDService
+from Services.LCDService import LCDService
+
 def start_server():
+    lcd = LCDService()
     host = '0.0.0.0'
     port = 5001
 
@@ -10,12 +20,12 @@ def start_server():
         s.bind((host, port))
         s.listen()
         print('Listening for commands...')
-        
+
         while True:  # Keep server running
             try:
                 conn, addr = s.accept()
                 print(f'Connected by {addr}')
-                
+
                 with conn:
                     while True:
                         try:
@@ -28,17 +38,18 @@ def start_server():
                                 # Display to LCD here
                                 print("Triggering LCD!")
                                 # Add your LCD code here
-                            
+                                lcd.display(data)
+
                             # Send acknowledgment back to client
                             conn.send(b"OK")
-                            
+
                         except ConnectionResetError:
                             print(f'Client {addr} connection reset')
                             break
                         except Exception as e:
                             print(f"Error receiving data: {e}")
                             break
-                            
+
             except KeyboardInterrupt:
                 print("Server stopped by user")
                 break
