@@ -1,15 +1,14 @@
-# HumanDetector.py
+# HumanDetector.py (network alert version)
 import cv2
 import numpy as np
 import mediapipe as mp
 import sys
 import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+import socket
 from collections import deque
 from time import time
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # MediaPipe
 mp_pose = mp.solutions.pose
@@ -27,11 +26,18 @@ last_alert = ""
 last_time = 0
 still_start_time = None
 
+# Sends alert over network to Raspberry Pi
 def send_alert(msg):
     global last_alert, last_time
     now = time()
     if msg != last_alert and now - last_time > 5:
         print(f"[ALERT] {msg}")
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(('10.0.155.13', 5001))  # Replace with actual Raspberry Pi IP
+                s.sendall(msg.encode())
+        except Exception as e:
+            print(f"⚠️ Failed to send to LCD: {e}")
         last_alert = msg
         last_time = now
 
@@ -63,7 +69,6 @@ while True:
         start_point = (int(min_x * w), int(min_y * h))
         end_point = (int(max_x * w), int(max_y * h))
         cv2.rectangle(frame, start_point, end_point, (0, 255, 0), 2)
-
 
         # Hand fidgeting (right wrist)
         rw = lms[mp_pose.PoseLandmark.RIGHT_WRIST]
@@ -97,23 +102,21 @@ while True:
         else:
             leg_q.clear()  # reset queue if legs go invisible
 
+    if face_result.multi_face_landmarks:
+        nose = face_result.multi_face_landmarks[0].landmark[1]
+        head_q.append((nose.x, nose.y))
 
-        if face_result.multi_face_landmarks:
-            nose = face_result.multi_face_landmarks[0].landmark[1]
-            head_q.append((nose.x, nose.y))
+        if len(head_q) > 5:
+            deltas = [np.linalg.norm(np.subtract(head_q[i], head_q[i - 1])) for i in range(1, len(head_q))]
+            movement = np.mean(deltas)
 
-            if len(head_q) > 5:
-                deltas = [np.linalg.norm(np.subtract(head_q[i], head_q[i - 1])) for i in range(1, len(head_q))]
-                movement = np.mean(deltas)
-
-                if movement < 0.003:
-                    if still_start_time is None:
-                        still_start_time = time()
-                    elif time() - still_start_time > 5:
-                        alert = "Move your head"
-                else:
-                    still_start_time = None
-
+            if movement < 0.003:
+                if still_start_time is None:
+                    still_start_time = time()
+                elif time() - still_start_time > 5:
+                    alert = "Move your head"
+            else:
+                still_start_time = None
 
     if alert:
         send_alert(alert)
@@ -124,3 +127,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
