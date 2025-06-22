@@ -63,17 +63,26 @@ while True:
 
     height, width, _ = frame.shape
 
-    for i in range(len(scores)):
-        print(f"[DEBUG] class={int(classes[i])}, score={scores[i]:.2f}")
-        if scores[i] > 0.5:
-            ymin, xmin, ymax, xmax = boxes[i]
-            x1, y1 = int(xmin * width), int(ymin * height)
-            x2, y2 = int(xmax * width), int(ymax * height)
+    PERSON_CLASS_ID = 0
 
-            # Draw box and label
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = labels[PERSON_CLASS_ID] if PERSON_CLASS_ID < len(labels) else "Person"
-            cv2.putText(frame, label, (x1, y1 - 10),
+    for i in range(len(scores)):
+        class_id = int(classes[i])
+        score = scores[i]
+
+        print(f"[DEBUG] class={class_id}, score={score:.2f}")
+
+        if score > 0.5 and class_id == PERSON_CLASS_ID:
+            # Bounding box coordinates are normalized (0.0 to 1.0)
+            ymin, xmin, ymax, xmax = boxes[i]
+            (left, top, right, bottom) = (int(xmin * width), int(ymin * height),
+                                          int(xmax * width), int(ymax * height))
+
+            # Draw the bounding box
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+            # Optional: Draw label
+            label = f"Person: {int(score * 100)}%"
+            cv2.putText(frame, label, (left, top - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
