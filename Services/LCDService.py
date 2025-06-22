@@ -9,18 +9,14 @@ class LCDService:
         self.lcd.write_string(message)
         self.width = 16
 
+        sleep(delay * 3)
         # Always run through the message once (do-while behavior)
         while True:
             # Scroll from left to right (beginning to end)
             for i in range(len(message) - self.width + 1):
                 self.lcd.clear()
                 self.lcd.write_string(message[i:i + self.width])
-                sleep(delay)
-            
-            # If message is longer than display width, scroll back to beginning
-            if len(message) > self.width:
-                # Scroll from right to left (end to beginning)
-                for i in range(len(message) - self.width, -1, -1):
-                    self.lcd.clear()
-                    self.lcd.write_string(message[i:i + self.width])
+                if (i == len(message) - self.width + 1):
+                    sleep(delay * 3)
+                else:
                     sleep(delay)
