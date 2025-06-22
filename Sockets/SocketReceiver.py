@@ -33,10 +33,10 @@ def start_server():
                             if not data:
                                 print(f'Client {addr} disconnected')
                                 break
-                            print(f"Received: {data}")
+                            print(f"Received: {data} {data=="STOP_SWAYING"} {data=="SWINGING_LEGS"} {data=="MOVE_HEAD"} {data=="FIDGETING_HANDS"}")
                             lcd_service = LCDService()
-                            led_service = LEDService()
-                            led_service.light(7)
+                            # led_service = LEDService()
+                            # led_service.light(7)
                             if data == "STOP_SWAYING":
                                 # run code when they need to stop swaying
                                 lcd_service.display("Stop fidgeting hands")
