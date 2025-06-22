@@ -16,6 +16,6 @@ class LCDService:
                 self.lcd.clear()
                 self.lcd.write_string(message[i:i + self.width])
                 if i == len(message) - self.width or i == 0:
-                    sleep(delay * 10)
+                    sleep(delay * 7)
                 else:
                     sleep(delay)
