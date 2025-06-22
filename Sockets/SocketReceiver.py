@@ -39,7 +39,7 @@ def start_server():
                             # led_service.light(7)
                             if data == "STOP_SWAYING":
                                 # run code when they need to stop swaying
-                                lcd_service.display("Stop fidgeting hands")
+                                lcd_service.display("Stop swaying")
                             elif data == "SWINGING_LEGS":
                                 # run code when they need to swinging legs
                                 lcd_service.display("Stop swinging legs")
