@@ -5,6 +5,7 @@ class LCDService:
     def display(self, message = "Hello World", delay = 0.3, loop = True):
         self.lcd = CharLCD('PCF8574', 0x27)
         self.lcd.clear()
+        self.lcd.write_string(message)
         self.width = 16
 
         while True:
