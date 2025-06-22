@@ -27,10 +27,12 @@ last_alert = ""
 last_time = 0
 still_start_time = None
 
-def send_alert(msg):
+def send_alert(msg, command):
     global last_alert, last_time
     now = time()
     if msg != last_alert and now - last_time > 5:
+        sender = SocketSender()
+        sender.send_command(command)
         print(f"[ALERT] {msg}")
         last_alert = msg
         last_time = now
@@ -50,6 +52,7 @@ while True:
     face_result = face.process(rgb)
 
     alert = None
+    command = None
 
     if pose_result.pose_landmarks:
         lms = pose_result.pose_landmarks.landmark
@@ -71,8 +74,7 @@ while True:
         if len(hand_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hand_q[i], hand_q[i-1])) for i in range(1, len(hand_q))]
             if np.mean(deltas) > 0.01:
-                sender = SocketSender()
-                sender.send_command("FIDGETING_HANDS")
+                command = "FIDGETING_HANDS"
                 alert = "Stop fidgeting hands"
 
         # Hip swaying
@@ -83,8 +85,7 @@ while True:
         if len(hip_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hip_q[i], hip_q[i-1])) for i in range(1, len(hip_q))]
             if np.mean(deltas) > 0.005:
-                sender = SocketSender()
-                sender.send_command("STOP_SWAYING")
+                command = "STOP_SWAYING"
                 alert = "Stop swaying"
 
         lankle = lms[mp_pose.PoseLandmark.LEFT_ANKLE]
@@ -97,8 +98,7 @@ while True:
             if len(leg_q) > 5:
                 deltas = [np.linalg.norm(np.subtract(leg_q[i], leg_q[i-1])) for i in range(1, len(leg_q))]
                 if np.mean(deltas) > 0.005:
-                    sender = SocketSender()
-                    sender.send_command("SWINGING_LEGS")
+                    command = "SWINGING_LEGS"
                     alert = "Stop swinging legs"
         else:
             leg_q.clear()  # reset queue if legs go invisible
@@ -116,15 +116,14 @@ while True:
                     if still_start_time is None:
                         still_start_time = time()
                     elif time() - still_start_time > 5:
-                        sender = SocketSender()
-                        sender.send_command("MOVE_HEAD")
+                        command = "MOVE_HEAD"
                         alert = "Move your head"
                 else:
                     still_start_time = None
 
 
-    if alert:
-        send_alert(alert)
+    if alert and command:
+        send_alert(alert, command)
 
     cv2.imshow("Pose Detection", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
