@@ -42,6 +42,7 @@ class CameraService:
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
             self.camera.set(cv2.CAP_PROP_FPS, self.fps)
+            print(f"self.camera.get12 {self.camera.get(cv2.CAP_PROP_FPS)} fps: {self.fps}")
 
             if not self.camera.isOpened():
                 print(f"Error: Could not open camera at index {self.camera_index}")
