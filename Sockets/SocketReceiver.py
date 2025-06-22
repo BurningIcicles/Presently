@@ -7,29 +7,30 @@ import threading
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Services.LEDService import LEDService
-
-# Step 2: Now you can import LCDService
 from Services.LCDService import LCDService
 
-# Global lock for LCD access
-lcd_lock = threading.Lock()
-
 def display_message(lcd_service, message):
-    """Display message on LCD with thread safety."""
+    """Display message on LCD in a separate thread to avoid blocking."""
     try:
-        # Acquire lock before accessing LCD
-        with lcd_lock:
-            lcd_service.display(message)  # Don't loop to avoid blocking
+        lcd_service.display(message, loop=False)  # Don't loop, just display once
     except Exception as e:
         print(f"Error displaying message: {e}")
 
+def blink_led(led_service, blink_count):
+    """Blink LED in a separate thread to avoid blocking."""
+    try:
+        led_service.light(blink_count)
+    except Exception as e:
+        print(f"Error blinking LED: {e}")
+
 def start_server():
     lcd_service = LCDService()
+    led_service = LEDService()
     host = '0.0.0.0'
     port = 5001
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reuse of address
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((host, port))
         s.listen()
         print('Listening for commands...')
@@ -48,12 +49,18 @@ def start_server():
                                 break
                             print(f"Received: {data}")
                             
-                            # Handle commands with thread safety
+                            # Handle commands with simple threading
                             if data == "STOP_SWAYING":
                                 print("Displaying: Stop swaying")
+                                # Run LCD display in separate thread
                                 lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swaying"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
+                                
+                                # Run LED blink in separate thread
+                                led_thread = threading.Thread(target=blink_led, args=(led_service, 3))
+                                led_thread.daemon = True
+                                led_thread.start()
                                 
                             elif data == "SWINGING_LEGS":
                                 print("Displaying: Stop swinging legs")
@@ -61,19 +68,31 @@ def start_server():
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
+                                led_thread = threading.Thread(target=blink_led, args=(led_service, 3))
+                                led_thread.daemon = True
+                                led_thread.start()
+                                
                             elif data == "MOVE_HEAD":
                                 print("Displaying: Move your head")
                                 lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Move your head"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
+                                led_thread = threading.Thread(target=blink_led, args=(led_service, 3))
+                                led_thread.daemon = True
+                                led_thread.start()
+                                
                             elif data == "FIDGETING_HANDS":
                                 print("Displaying: Stop fidgeting hands")
                                 lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop fidgeting hands"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
+                                
+                                led_thread = threading.Thread(target=blink_led, args=(led_service, 3))
+                                led_thread.daemon = True
+                                led_thread.start()
 
-                            # Send acknowledgment back to client
+                            # Send acknowledgment back to client immediately
                             conn.send(b"OK")
 
                         except ConnectionResetError:
