@@ -4,11 +4,11 @@ import numpy as np
 import mediapipe as mp
 import sys
 import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from collections import deque
 from time import time
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Sockets.SocketSender import SocketSender
 
 
 # MediaPipe
@@ -71,6 +71,8 @@ while True:
         if len(hand_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hand_q[i], hand_q[i-1])) for i in range(1, len(hand_q))]
             if np.mean(deltas) > 0.01:
+                sender = SocketSender()
+                sender.send_command("FIDGETING_HANDS")
                 alert = "Stop fidgeting hands"
 
         # Hip swaying
@@ -81,6 +83,8 @@ while True:
         if len(hip_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hip_q[i], hip_q[i-1])) for i in range(1, len(hip_q))]
             if np.mean(deltas) > 0.005:
+                sender = SocketSender()
+                sender.send_command("STOP_SWAYING")
                 alert = "Stop swaying"
 
         lankle = lms[mp_pose.PoseLandmark.LEFT_ANKLE]
@@ -93,6 +97,8 @@ while True:
             if len(leg_q) > 5:
                 deltas = [np.linalg.norm(np.subtract(leg_q[i], leg_q[i-1])) for i in range(1, len(leg_q))]
                 if np.mean(deltas) > 0.005:
+                    sender = SocketSender()
+                    sender.send_command("SWINGING_LEGS")
                     alert = "Stop swinging legs"
         else:
             leg_q.clear()  # reset queue if legs go invisible
@@ -110,6 +116,8 @@ while True:
                     if still_start_time is None:
                         still_start_time = time()
                     elif time() - still_start_time > 5:
+                        sender = SocketSender()
+                        sender.send_command("MOVE_HEAD")
                         alert = "Move your head"
                 else:
                     still_start_time = None
