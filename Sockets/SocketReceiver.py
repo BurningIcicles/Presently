@@ -12,7 +12,7 @@ from Services.LCDService import LCDService
 def display_message(lcd_service, message):
     """Display message on LCD in a separate thread to avoid blocking."""
     try:
-        lcd_service.display(message, loop=False)  # Don't loop, just display once
+        lcd_service.display(message)  # Don't loop, just display once
     except Exception as e:
         print(f"Error displaying message: {e}")
 
