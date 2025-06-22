@@ -4,6 +4,8 @@ import os
 import sys
 import socket
 
+from Services.LEDService import LEDService
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -34,11 +36,21 @@ def start_server():
                                 print(f'Client {addr} disconnected')
                                 break
                             print(f"Received: {data}")
-                            if data == "SHOW_TEXT":
-                                # Display to LCD here
-                                print("Triggering LCD!")
-                                # Add your LCD code here
-                                lcd.display(data)
+                            lcd_service = LCDService()
+                            led_service = LEDService()
+                            led_service.light(7)
+                            if data == "STOP_SWAYING":
+                                # run code when they need to stop swaying
+                                lcd_service.display("Stop fidgeting hands")
+                            elif data == "SWINGING_LEGS":
+                                # run code when they need to swinging legs
+                                lcd_service.display("Stop swinging legs")
+                            elif data == "MOVE_HEAD":
+                                # run code when they need to move their head
+                                lcd_service.display("Move your head")
+                            elif data == "FIDGETING_HANDS":
+                                # run code when they need to stop fidgeting with their hands
+                                lcd_service.display("Stop fidgeting hands")
 
                             # Send acknowledgment back to client
                             conn.send(b"OK")

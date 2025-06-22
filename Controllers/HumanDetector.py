@@ -1,14 +1,15 @@
-# HumanDetector.py (network alert version)
+# HumanDetector.py
 import cv2
 import numpy as np
 import mediapipe as mp
 import sys
 import os
-import socket
 from collections import deque
 from time import time
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Sockets.SocketSender import SocketSender
+
 
 # MediaPipe
 mp_pose = mp.solutions.pose
@@ -26,18 +27,11 @@ last_alert = ""
 last_time = 0
 still_start_time = None
 
-# Sends alert over network to Raspberry Pi
 def send_alert(msg):
     global last_alert, last_time
     now = time()
     if msg != last_alert and now - last_time > 5:
         print(f"[ALERT] {msg}")
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect(('10.0.155.13', 5001))  # Replace with actual Raspberry Pi IP
-                s.sendall(msg.encode())
-        except Exception as e:
-            print(f"⚠️ Failed to send to LCD: {e}")
         last_alert = msg
         last_time = now
 
@@ -70,12 +64,15 @@ while True:
         end_point = (int(max_x * w), int(max_y * h))
         cv2.rectangle(frame, start_point, end_point, (0, 255, 0), 2)
 
+
         # Hand fidgeting (right wrist)
         rw = lms[mp_pose.PoseLandmark.RIGHT_WRIST]
         hand_q.append((rw.x, rw.y))
         if len(hand_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hand_q[i], hand_q[i-1])) for i in range(1, len(hand_q))]
             if np.mean(deltas) > 0.01:
+                sender = SocketSender()
+                sender.send_command("FIDGETING_HANDS")
                 alert = "Stop fidgeting hands"
 
         # Hip swaying
@@ -86,6 +83,8 @@ while True:
         if len(hip_q) > 5:
             deltas = [np.linalg.norm(np.subtract(hip_q[i], hip_q[i-1])) for i in range(1, len(hip_q))]
             if np.mean(deltas) > 0.005:
+                sender = SocketSender()
+                sender.send_command("STOP_SWAYING")
                 alert = "Stop swaying"
 
         lankle = lms[mp_pose.PoseLandmark.LEFT_ANKLE]
@@ -98,25 +97,31 @@ while True:
             if len(leg_q) > 5:
                 deltas = [np.linalg.norm(np.subtract(leg_q[i], leg_q[i-1])) for i in range(1, len(leg_q))]
                 if np.mean(deltas) > 0.005:
+                    sender = SocketSender()
+                    sender.send_command("SWINGING_LEGS")
                     alert = "Stop swinging legs"
         else:
             leg_q.clear()  # reset queue if legs go invisible
 
-    if face_result.multi_face_landmarks:
-        nose = face_result.multi_face_landmarks[0].landmark[1]
-        head_q.append((nose.x, nose.y))
 
-        if len(head_q) > 5:
-            deltas = [np.linalg.norm(np.subtract(head_q[i], head_q[i - 1])) for i in range(1, len(head_q))]
-            movement = np.mean(deltas)
+        if face_result.multi_face_landmarks:
+            nose = face_result.multi_face_landmarks[0].landmark[1]
+            head_q.append((nose.x, nose.y))
 
-            if movement < 0.003:
-                if still_start_time is None:
-                    still_start_time = time()
-                elif time() - still_start_time > 5:
-                    alert = "Move your head"
-            else:
-                still_start_time = None
+            if len(head_q) > 5:
+                deltas = [np.linalg.norm(np.subtract(head_q[i], head_q[i - 1])) for i in range(1, len(head_q))]
+                movement = np.mean(deltas)
+
+                if movement < 0.003:
+                    if still_start_time is None:
+                        still_start_time = time()
+                    elif time() - still_start_time > 5:
+                        sender = SocketSender()
+                        sender.send_command("MOVE_HEAD")
+                        alert = "Move your head"
+                else:
+                    still_start_time = None
+
 
     if alert:
         send_alert(alert)
@@ -127,4 +132,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
