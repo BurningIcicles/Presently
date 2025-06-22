@@ -6,19 +6,45 @@ def start_server():
     port = 5001
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reuse of address
         s.bind((host, port))
         s.listen()
         print('Listening for commands...')
-        conn, addr = s.accept()
-        with conn:
-            print(f'Connected by {addr}')
-            while True:
-                data = conn.recv(1024).decode()
-                if not data:
-                    break
-                print(f"Received: {data}")
-                if data == "SHOW_TEXT":
-                    # Display to LCD here
-                    print("Triggering LCD!")
+        
+        while True:  # Keep server running
+            try:
+                conn, addr = s.accept()
+                print(f'Connected by {addr}')
+                
+                with conn:
+                    while True:
+                        try:
+                            data = conn.recv(1024).decode()
+                            if not data:
+                                print(f'Client {addr} disconnected')
+                                break
+                            print(f"Received: {data}")
+                            if data == "SHOW_TEXT":
+                                # Display to LCD here
+                                print("Triggering LCD!")
+                                # Add your LCD code here
+                            
+                            # Send acknowledgment back to client
+                            conn.send(b"OK")
+                            
+                        except ConnectionResetError:
+                            print(f'Client {addr} connection reset')
+                            break
+                        except Exception as e:
+                            print(f"Error receiving data: {e}")
+                            break
+                            
+            except KeyboardInterrupt:
+                print("Server stopped by user")
+                break
+            except Exception as e:
+                print(f"Error accepting connection: {e}")
+                continue
 
-start_server()
+if __name__ == "__main__":
+    start_server()
