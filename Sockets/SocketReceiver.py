@@ -53,7 +53,7 @@ def start_server():
                             if data == "STOP_SWAYING":
                                 print("Displaying: Stop swaying")
                                 # Run LCD display in separate thread
-                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swaying"))
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Swaying body"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
@@ -64,7 +64,7 @@ def start_server():
                                 
                             elif data == "SWINGING_LEGS":
                                 print("Displaying: Stop swinging legs")
-                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swinging legs"))
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Swinging legs"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
@@ -74,7 +74,7 @@ def start_server():
                                 
                             elif data == "MOVE_HEAD":
                                 print("Displaying: Move your head")
-                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Move your head"))
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Make eye contact"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
@@ -84,7 +84,7 @@ def start_server():
                                 
                             elif data == "FIDGETING_HANDS":
                                 print("Displaying: Stop fidgeting hands")
-                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop fidgeting hands"))
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Fidgeting with hands"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
                                 
