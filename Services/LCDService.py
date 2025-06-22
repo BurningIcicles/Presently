@@ -15,12 +15,31 @@ class LCDService:
         self.lcd.write_string(second_line)
 
     def _wrap_text(self, message, width=16):
-        """Simple text wrapping - first 16 chars on line 1, rest on line 2."""
+        """Word wrapping - keeps words together."""
+        words = message.split()
+        
         if len(message) <= width:
             # Short message fits on first line
             return message, ""
-        else:
-            # Message wraps to second line
-            first_line = message[:width]
-            second_line = message[width:width * 2]  # Max 16 more chars
-            return first_line, second_line
+        
+        # Try to fit words on first line
+        first_line = ""
+        second_line = ""
+        
+        for word in words:
+            # Check if word fits on first line
+            if len(first_line + word) <= width:
+                first_line += word + " "
+            else:
+                # Word goes to second line
+                second_line += word + " "
+        
+        # Remove trailing spaces
+        first_line = first_line.rstrip()
+        second_line = second_line.rstrip()
+        
+        # If second line is too long, truncate it
+        if len(second_line) > width:
+            second_line = second_line[:width]
+        
+        return first_line, second_line
