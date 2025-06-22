@@ -248,8 +248,9 @@ class CameraService:
             bool: True if recording completed successfully
         """
         print("Recording video")
-        if not self.initialize_camera():
-            return False
+        if self.camera is None or not self.camera.isOpened():
+            if not self.initialize_camera():
+                return False
 
         # Get camera properties for video writer
         fps = int(self.camera.get(cv2.CAP_PROP_FPS))
