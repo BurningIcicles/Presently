@@ -6,4 +6,4 @@ from Services.LEDService import LEDService
 
 if __name__ == "__main__":
     led_service = LEDService()
-    led_service.light(5)
+    led_service.light(7)
