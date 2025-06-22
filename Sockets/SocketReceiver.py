@@ -3,6 +3,7 @@
 import os
 import sys
 import socket
+import threading
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Services.LEDService import LEDService
@@ -10,8 +11,15 @@ from Services.LEDService import LEDService
 # Step 2: Now you can import LCDService
 from Services.LCDService import LCDService
 
+def display_message(lcd_service, message):
+    """Display message on LCD in a separate thread to avoid blocking."""
+    try:
+        lcd_service.display(message, loop=False)  # Don't loop, just display once
+    except Exception as e:
+        print(f"Error displaying message: {e}")
+
 def start_server():
-    lcd = LCDService()
+    lcd_service = LCDService()
     host = '0.0.0.0'
     port = 5001
 
@@ -33,22 +41,33 @@ def start_server():
                             if not data:
                                 print(f'Client {addr} disconnected')
                                 break
-                            print(f"Received: {data} {data=='STOP_SWAYING'} {data=='SWINGING_LEGS'} {data=='MOVE_HEAD'} {data=='FIDGETING_HANDS'}")
-                            lcd_service = LCDService()
-                            # led_service = LEDService()
-                            # led_service.light(7)
+                            print(f"Received: {data}")
+                            
+                            # Handle commands without blocking
                             if data == "STOP_SWAYING":
-                                # run code when they need to stop swaying
-                                lcd_service.display("Stop swaying")
+                                print("Displaying: Stop swaying")
+                                # Run LCD display in separate thread
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swaying"))
+                                lcd_thread.daemon = True
+                                lcd_thread.start()
+                                
                             elif data == "SWINGING_LEGS":
-                                # run code when they need to swinging legs
-                                lcd_service.display("Stop swinging legs")
+                                print("Displaying: Stop swinging legs")
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swinging legs"))
+                                lcd_thread.daemon = True
+                                lcd_thread.start()
+                                
                             elif data == "MOVE_HEAD":
-                                # run code when they need to move their head
-                                lcd_service.display("Move your head")
+                                print("Displaying: Move your head")
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Move your head"))
+                                lcd_thread.daemon = True
+                                lcd_thread.start()
+                                
                             elif data == "FIDGETING_HANDS":
-                                # run code when they need to stop fidgeting with their hands
-                                lcd_service.display("Stop fidgeting hands")
+                                print("Displaying: Stop fidgeting hands")
+                                lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop fidgeting hands"))
+                                lcd_thread.daemon = True
+                                lcd_thread.start()
 
                             # Send acknowledgment back to client
                             conn.send(b"OK")
@@ -56,10 +75,15 @@ def start_server():
                         except ConnectionResetError:
                             print(f'Client {addr} connection reset')
                             break
+                        except ConnectionAbortedError:
+                            print(f'Client {addr} connection aborted')
+                            break
                         except Exception as e:
                             print(f"Error receiving data: {e}")
                             break
-
+                
+                print(f'Connection with {addr} closed, waiting for new connections...')
+                            
             except KeyboardInterrupt:
                 print("Server stopped by user")
                 break
