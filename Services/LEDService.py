@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 
-def LEDService():
+class LEDService:
     def light(self, blink_count):
         self.pin = 17 #GPIO17 = Pin 11
         GPIO.setmode(GPIO.BCM)
