@@ -8,4 +8,4 @@ from Services.LCDService import LCDService
 
 if __name__ == "__main__":
     LCDService = LCDService()
-    LCDService.display("freakyyy")
+    LCDService.display("Stop swinging legs")
