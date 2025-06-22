@@ -11,10 +11,15 @@ from Services.LEDService import LEDService
 # Step 2: Now you can import LCDService
 from Services.LCDService import LCDService
 
+# Global lock for LCD access
+lcd_lock = threading.Lock()
+
 def display_message(lcd_service, message):
-    """Display message on LCD in a separate thread to avoid blocking."""
+    """Display message on LCD with thread safety."""
     try:
-        lcd_service.display(message)  # Don't loop, just display once
+        # Acquire lock before accessing LCD
+        with lcd_lock:
+            lcd_service.display(message)  # Don't loop to avoid blocking
     except Exception as e:
         print(f"Error displaying message: {e}")
 
@@ -29,7 +34,7 @@ def start_server():
         s.listen()
         print('Listening for commands...')
 
-        while True:  # Keep server running
+        while True:
             try:
                 conn, addr = s.accept()
                 print(f'Connected by {addr}')
@@ -43,10 +48,9 @@ def start_server():
                                 break
                             print(f"Received: {data}")
                             
-                            # Handle commands without blocking
+                            # Handle commands with thread safety
                             if data == "STOP_SWAYING":
                                 print("Displaying: Stop swaying")
-                                # Run LCD display in separate thread
                                 lcd_thread = threading.Thread(target=display_message, args=(lcd_service, "Stop swaying"))
                                 lcd_thread.daemon = True
                                 lcd_thread.start()
