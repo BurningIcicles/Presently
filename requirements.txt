@@ -7,3 +7,4 @@ mediapipe==0.10.9
 RPLCD==1.4.0
 smbus2==0.5.0
 ioctl==0.2.2
+RPi.GPIO==0.7.1
