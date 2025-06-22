@@ -41,8 +41,8 @@ class CameraService:
             # Set camera properties
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
-            cap = cv2.VideoCapture(self.camera_index)
-            cap.set(cv2.CAP_PROP_FPS, self.fps)
+            self.camera.set(cv2.CAP_PROP_FPS, self.fps)
+            print(f"self.camera.get12 {self.camera.get(cv2.CAP_PROP_FPS)} fps: {self.fps}")
 
             if not self.camera.isOpened():
                 print(f"Error: Could not open camera at index {self.camera_index}")
@@ -80,7 +80,7 @@ class CameraService:
         """
         print("Capturing frame")
         if self.camera is None or not self.camera.isOpened():
-            if not self.initialize_camera():
+            # if not self.initialize_camera():
                 return None
 
         # self.camera.read() returns a boolean and the frame if it was captured
