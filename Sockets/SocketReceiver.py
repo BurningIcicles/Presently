@@ -4,10 +4,8 @@ import os
 import sys
 import socket
 
-from Services.LEDService import LEDService
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from Services.LEDService import LEDService
 
 # Step 2: Now you can import LCDService
 from Services.LCDService import LCDService
