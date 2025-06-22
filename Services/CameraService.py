@@ -81,7 +81,7 @@ class CameraService:
         print("Capturing frame")
         if self.camera is None or not self.camera.isOpened():
             # if not self.initialize_camera():
-                return None
+            return None
 
         # self.camera.read() returns a boolean and the frame if it was captured
         frame_captured, frame = self.camera.read()
