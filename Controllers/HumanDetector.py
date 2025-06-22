@@ -1,137 +1,126 @@
+# HumanDetector.py
 import cv2
 import numpy as np
-import time
+import mediapipe as mp
 import sys
 import os
-import mediapipe as mp
 
-# Add parent path to import CameraService
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from Services.CameraService import CameraService
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Path to model and label file
-model_path = os.path.join(os.path.dirname(__file__), "..", "Model", "detect.tflite")
-labelmap_path = os.path.join(os.path.dirname(__file__), "..", "Model", "labelmap.txt")
+from collections import deque
+from time import time
 
-# Load labels
-try:
-    with open(labelmap_path, 'r') as f:
-        labels = [line.strip() for line in f.readlines()]
-    PERSON_CLASS_ID = labels.index("person") if "person" in labels else 0
-    print(f"Loaded labelmap.txt with {len(labels)} labels.")
-except Exception as e:
-    print(f"⚠️ Could not load labelmap.txt: {e}")
-    labels = ["person"]
-    PERSON_CLASS_ID = 0
 
-# Load TFLite SSD model
-from tflite_runtime.interpreter import Interpreter
-interpreter = Interpreter(model_path=model_path)
-interpreter.allocate_tensors()
-
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-input_shape = input_details[0]['shape']
-input_height = input_shape[1]
-input_width = input_shape[2]
-
-# Initialize MediaPipe components
-mp_drawing = mp.solutions.drawing_utils
+# MediaPipe
 mp_pose = mp.solutions.pose
-mp_face_mesh = mp.solutions.face_mesh
+mp_face = mp.solutions.face_mesh
+mp_drawing = mp.solutions.drawing_utils
+pose = mp_pose.Pose()
+face = mp_face.FaceMesh(refine_landmarks=True)
 
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, enable_segmentation=False)
-face_mesh = mp_face_mesh.FaceMesh(
-    static_image_mode=False,
-    max_num_faces=1,
-    refine_landmarks=True,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
-)
+# Movement tracking
+hand_q = deque(maxlen=10)
+hip_q = deque(maxlen=10)
+head_q = deque(maxlen=10)
+leg_q = deque(maxlen=10)
+last_alert = ""
+last_time = 0
+still_start_time = None
 
-# Initialize camera
-camera = CameraService()
-camera.initialize_camera()
+def send_alert(msg):
+    global last_alert, last_time
+    now = time()
+    if msg != last_alert and now - last_time > 5:
+        print(f"[ALERT] {msg}")
+        last_alert = msg
+        last_time = now
 
-print("🟢 Person detection + full skeleton + face mesh started. Press 'q' to quit.")
+# Replace this with your actual camera or use OpenCV VideoCapture for quick test
+cap = cv2.VideoCapture(0)
 
 while True:
-    frame = camera.capture_frame()
-    if frame is None:
-        continue
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-    height, width, _ = frame.shape
+    h, w, _ = frame.shape
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Resize to SSD input
-    input_frame = cv2.resize(frame, (input_width, input_height))
-    input_data = np.expand_dims(input_frame, axis=0).astype(np.uint8)
+    pose_result = pose.process(rgb)
+    face_result = face.process(rgb)
 
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    interpreter.invoke()
+    alert = None
 
-    boxes = interpreter.get_tensor(output_details[0]['index'])[0]
-    classes = interpreter.get_tensor(output_details[1]['index'])[0]
-    scores = interpreter.get_tensor(output_details[2]['index'])[0]
+    if pose_result.pose_landmarks:
+        lms = pose_result.pose_landmarks.landmark
 
-    PERSON_CLASS_ID = 0
+        # Draw green bounding box around person
+        xs = [lm.x for lm in lms]
+        ys = [lm.y for lm in lms]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
 
-    for i in range(len(scores)):
-        class_id = int(classes[i])
-        score = scores[i]
+        start_point = (int(min_x * w), int(min_y * h))
+        end_point = (int(max_x * w), int(max_y * h))
+        cv2.rectangle(frame, start_point, end_point, (0, 255, 0), 2)
 
-        if score > 0.5 and class_id == PERSON_CLASS_ID:
-            ymin, xmin, ymax, xmax = boxes[i]
-            box_margin = 20  # pixels to expand in all directions
 
-            left = max(0, int(xmin * width) - box_margin)
-            top = max(0, int(ymin * height) - box_margin)
-            right = min(width, int(xmax * width) + box_margin)
-            bottom = min(height, int(ymax * height) + box_margin)
-            # Draw bounding box
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-            label = f"Person: {int(score * 100)}%"
-            cv2.putText(frame, label, (left, top - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        # Hand fidgeting (right wrist)
+        rw = lms[mp_pose.PoseLandmark.RIGHT_WRIST]
+        hand_q.append((rw.x, rw.y))
+        if len(hand_q) > 5:
+            deltas = [np.linalg.norm(np.subtract(hand_q[i], hand_q[i-1])) for i in range(1, len(hand_q))]
+            if np.mean(deltas) > 0.01:
+                alert = "Stop fidgeting hands"
 
-            # Crop to person area
-            person_crop = frame[top:bottom, left:right]
-            if person_crop.size == 0:
-                continue
+        # Hip swaying
+        lhip = lms[mp_pose.PoseLandmark.LEFT_HIP]
+        rhip = lms[mp_pose.PoseLandmark.RIGHT_HIP]
+        hips = ((lhip.x + rhip.x)/2, (lhip.y + rhip.y)/2)
+        hip_q.append(hips)
+        if len(hip_q) > 5:
+            deltas = [np.linalg.norm(np.subtract(hip_q[i], hip_q[i-1])) for i in range(1, len(hip_q))]
+            if np.mean(deltas) > 0.005:
+                alert = "Stop swaying"
 
-            crop_rgb = cv2.cvtColor(person_crop, cv2.COLOR_BGR2RGB)
+        lankle = lms[mp_pose.PoseLandmark.LEFT_ANKLE]
+        rankle = lms[mp_pose.PoseLandmark.RIGHT_ANKLE]
 
-            # Process pose (skeleton)
-            pose_results = pose.process(crop_rgb)
-            if pose_results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    image=person_crop,
-                    landmark_list=pose_results.pose_landmarks,
-                    connections=mp_pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
-                    connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 255), thickness=2)
-                )
+        # Only check movement if both ankles are visible with high confidence
+        if lankle.visibility > 0.6 and rankle.visibility > 0.6:
+            legs = ((lankle.x + rankle.x)/2, (lankle.y + rankle.y)/2)
+            leg_q.append(legs)
+            if len(leg_q) > 5:
+                deltas = [np.linalg.norm(np.subtract(leg_q[i], leg_q[i-1])) for i in range(1, len(leg_q))]
+                if np.mean(deltas) > 0.005:
+                    alert = "Stop swinging legs"
+        else:
+            leg_q.clear()  # reset queue if legs go invisible
 
-            # Process face mesh (head)
-            face_results = face_mesh.process(crop_rgb)
-            if face_results.multi_face_landmarks:
-                for face_landmarks in face_results.multi_face_landmarks:
-                    mp_drawing.draw_landmarks(
-                        image=person_crop,
-                        landmark_list=face_landmarks,
-                        connections=mp_face_mesh.FACEMESH_TESSELATION,
-                        landmark_drawing_spec=None,
-                        connection_drawing_spec=mp_drawing.DrawingSpec(
-                            color=(80, 110, 10), thickness=1, circle_radius=1
-                        )
-                    )
 
-            # Paste back annotated crop
-            frame[top:bottom, left:right] = person_crop
+        if face_result.multi_face_landmarks:
+            nose = face_result.multi_face_landmarks[0].landmark[1]
+            head_q.append((nose.x, nose.y))
 
-    cv2.imshow("Full Body + FaceMesh", frame)
+            if len(head_q) > 5:
+                deltas = [np.linalg.norm(np.subtract(head_q[i], head_q[i - 1])) for i in range(1, len(head_q))]
+                movement = np.mean(deltas)
+
+                if movement < 0.003:
+                    if still_start_time is None:
+                        still_start_time = time()
+                    elif time() - still_start_time > 5:
+                        alert = "Move your head"
+                else:
+                    still_start_time = None
+
+
+    if alert:
+        send_alert(alert)
+
+    cv2.imshow("Pose Detection", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-camera.release()
+cap.release()
 cv2.destroyAllWindows()
-
